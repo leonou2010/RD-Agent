@@ -1,5 +1,8 @@
 from typing import Literal
 
+from docker.errors import DockerException
+from loguru import logger
+
 from rdagent.app.data_science.conf import DS_RD_SETTING
 from rdagent.components.coder.CoSTEER.config import CoSTEERSettings
 from rdagent.utils.env import (
@@ -56,23 +59,39 @@ def get_ds_env(
     conf = DSCoderCoSTEERSettings()
     assert conf_type in ["kaggle", "mlebench"], f"Unknown conf_type: {conf_type}"
 
-    if conf.env_type == "docker":
-        env_conf = DSDockerConf() if conf_type == "kaggle" else MLEBDockerConf()
-        env = DockerEnv(conf=env_conf)
-    elif conf.env_type == "conda":
-        env = LocalEnv(
-            conf=(
-                CondaConf(conda_env_name=conf_type) if conf_type == "kaggle" else MLECondaConf(conda_env_name=conf_type)
+    def _create_env(env_kind: str) -> Env:
+        if env_kind == "docker":
+            env_conf = DSDockerConf() if conf_type == "kaggle" else MLEBDockerConf()
+            return DockerEnv(conf=env_conf)
+        if env_kind == "conda":
+            return LocalEnv(
+                conf=(
+                    CondaConf(conda_env_name=conf_type)
+                    if conf_type == "kaggle"
+                    else MLECondaConf(conda_env_name=conf_type)
+                )
             )
-        )
-    else:
-        raise ValueError(f"Unknown env type: {conf.env_type}")
-    env.conf.extra_volumes = extra_volumes.copy()
-    env.conf.running_timeout_period = running_timeout_period
-    if enable_cache is not None:
-        env.conf.enable_cache = enable_cache
-    env.prepare()
-    return env
+        raise ValueError(f"Unknown env type: {env_kind}")
+
+    env_type: Literal["docker", "conda"] = conf.env_type  # type: ignore[assignment]
+
+    while True:
+        env = _create_env(env_type)
+        env.conf.extra_volumes = extra_volumes.copy()
+        env.conf.running_timeout_period = running_timeout_period
+        if enable_cache is not None:
+            env.conf.enable_cache = enable_cache
+        try:
+            env.prepare()
+            return env
+        except (DockerException, FileNotFoundError) as exc:
+            if env_type != "docker":
+                raise
+            logger.warning(
+                "Docker unavailable when preparing data science environment; falling back to conda. Error: {}",
+                exc,
+            )
+            env_type = "conda"
 
 
 def get_clear_ws_cmd(stage: Literal["before_training", "before_inference"] = "before_training") -> str:

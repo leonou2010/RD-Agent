@@ -6,4 +6,10 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     git \  
     build-essential \
     strace \
-    && rm -rf /var/lib/apt/lists/* 
+    && rm -rf /var/lib/apt/lists/*
+
+# Create paths expected by RD-Agent generated code when running in the container.
+# They point back into the workspace mount so any file written there is persisted.
+RUN mkdir -p /home && ln -s /kaggle/workspace /home/submission && \
+    ln -s /kaggle/workspace /home/code && \
+    ln -s /kaggle/workspace /home/logs
