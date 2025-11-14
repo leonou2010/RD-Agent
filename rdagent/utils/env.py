@@ -521,8 +521,14 @@ class LocalEnv(Env[ASpecificLocalConf]):
             # Setup environment
             if env is None:
                 env = {}
-            path = [*self.conf.bin_path.split(":"), "/bin/", "/usr/bin/", *env.get("PATH", "").split(":")]
-            env["PATH"] = ":".join(path)
+            # Preserve the currently active PATH (e.g., conda-activated),
+            # and only prepend self.conf.bin_path if it is provided.
+            base_path = os.environ.get("PATH", "")
+            if getattr(self.conf, "bin_path", ""):
+                prepend_parts = [p for p in self.conf.bin_path.split(":") if p]
+                env["PATH"] = ":".join(prepend_parts + [base_path])
+            else:
+                env["PATH"] = base_path
 
             if entry is None:
                 entry = self.conf.default_entry

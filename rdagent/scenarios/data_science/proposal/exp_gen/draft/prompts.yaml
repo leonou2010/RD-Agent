@@ -1,0 +1,18 @@
+output_format:
+  component: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.component" %}
+  hypothesis: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.hypothesis" %}
+  data_loader: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.data_loader" %}
+  feature: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.feature" %}
+  model: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.model" %}
+  ensemble: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.ensemble" %}
+  workflow: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.workflow" %}
+  pipeline: |-
+    {% include "scenarios.data_science.proposal.exp_gen.prompts:output_format.pipeline" %}
+

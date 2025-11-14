@@ -277,6 +277,28 @@ class DataScienceRDLoop(RDLoop):
         self.trace.set_sota_exp_to_submit(sota_exp_to_submit)
         logger.log_object(sota_exp_to_submit, tag="sota_exp_to_submit")
 
+        # Snapshot the current SOTA submission to a durable location so it isn't lost
+        # by later workspace cleanups or timeouts. This does not alter selection logic;
+        # it merely copies an available submission artifact if present.
+        try:
+            if (
+                sota_exp_to_submit is not None
+                and getattr(sota_exp_to_submit, "experiment_workspace", None) is not None
+            ):
+                candidate_path = (
+                    sota_exp_to_submit.experiment_workspace.workspace_path / "submission.csv"
+                )
+                if candidate_path.exists():
+                    durable_dir = Path("/home/submission")
+                    durable_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(candidate_path, durable_dir / "submission.csv")
+                    logger.info(
+                        f"Snapshot SOTA submission to {durable_dir / 'submission.csv'}"
+                    )
+        except Exception as _exc:  # pragma: no cover
+            # Best-effort snapshot; never fail the loop due to copy issues.
+            logger.warning(f"Failed to snapshot SOTA submission: {_exc}")
+
         logger.log_object(self.trace, tag="trace")
         logger.log_object(self.trace.sota_experiment(search_type="all"), tag="SOTA experiment")
 
